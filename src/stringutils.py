@@ -1,8 +1,14 @@
 #!/usr/bin/python3
 import base64
 import hashlib
-from itertools import chain
+import subprocess
+import traceback
+import uuid
 
+import pyperclip
+
+pyperclip.paste()  # from gi.repository import GLib is causing problems I didn't understand the problem, so I made
+# pyperclip initialize the clipboard before importing it
 import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
@@ -64,64 +70,80 @@ class Hashing(dbus.service.Object):
 
     @dbus.service.method(iStringUtils, in_signature='s', out_signature='s')
     def sha1(self, data: str):
-        return hashlib.sha1(data).hexdigest()
+        return hashlib.sha1(data.encode()).hexdigest()
 
     @dbus.service.method(iStringUtils, in_signature='s', out_signature='s')
     def sha224(self, data: str):
-        return hashlib.sha224(data).hexdigest()
+        return hashlib.sha224(data.encode()).hexdigest()
 
     @dbus.service.method(iStringUtils, in_signature='s', out_signature='s')
     def sha256(self, data: str):
-        return hashlib.sha256(data).hexdigest()
+        return hashlib.sha256(data.encode()).hexdigest()
 
     @dbus.service.method(iStringUtils, in_signature='s', out_signature='s')
     def sha384(self, data: str):
-        return hashlib.sha384(data).hexdigest()
+        return hashlib.sha384(data.encode()).hexdigest()
 
     @dbus.service.method(iStringUtils, in_signature='s', out_signature='s')
     def sha512(self, data: str):
-        return hashlib.sha512(data).hexdigest()
+        return hashlib.sha512(data.encode()).hexdigest()
 
     @dbus.service.method(iStringUtils, in_signature='s', out_signature='s')
     def md5(self, data: str):
-        return hashlib.md5(data).hexdigest()
+        return hashlib.md5(data.encode()).hexdigest()
+
+
+class Utils(dbus.service.Object):
+    methods = ('len', 'uuid4')
+
+    def __init__(self):
+        dbus.service.Object.__init__(self, dbus.service.BusName(iStringUtils, dbus.SessionBus()),
+                                     "/utils")
+
+    @dbus.service.method(iStringUtils, in_signature='s', out_signature='s')
+    def len(self, data: str):
+        return str(len(data))
+
+    @dbus.service.method(iStringUtils, out_signature='s')
+    def uuid4(self,
+              *args):  # I need to use *args because it is getting harder to add features (my code just sucks rn)
+        return uuid.uuid4().hex
 
 
 class KRunnerHandler(dbus.service.Object):
-    ifaces = (Hashing, Encoding)
+    ifaces = (Encoding(), Hashing(), Utils())
+    emptyness = []  # dont ask
 
     def __init__(self):
         dbus.service.Object.__init__(self, dbus.service.BusName(iStringUtils, dbus.SessionBus()),
                                      "/krunnerhandler")
 
-    @dbus.service.method(iKRunner, in_signature='s', out_signature='a(sssida{ss})')
+    @dbus.service.method(iKRunner, in_signature='s', out_signature='a(sssida{sv})')
     def Match(self, query: str):
-        print("yes!")
-        responses = []
         for iface in self.ifaces:
             for method in iface.methods:
                 if query.startswith(method + " "):
                     try:
-                        res = Hashing.__getattribute__(method)(query[len(method) + 1:])
-                        response = krunner_response(res, res, {'subtext': 'Copy to Clipboard'})
-                        if len(res > 10):
-                            response = krunner_response(res, method, {'subtext': 'Copy to Clipboard'})
-                        responses.append(response)
+                        result = iface.__getattribute__(method)(query[len(method) + 1:])
+                        response = krunner_response(result, method + "(): " + result)
+                        if len(result) > 20:
+                            response = krunner_response(result, 'copy result of ' + method + "()")
+                        return [response]
                     except Exception:
-                        pass
+                        # traceback.print_exc()
+                        ...
+        return self.emptyness
 
     @dbus.service.method(iKRunner, out_signature='a(sss)')
     def Actions(self):
         # id, text, icon
-        return [("id", "Copy", "edit-copy")]
+        return [("id", "Copy to Clipboard", "edit-copy")]
 
     @dbus.service.method(iKRunner, in_signature='ss')
     def Run(self, data: str, action_id: str):
-        print(data, "FROM RUN")
+        pyperclip.copy(data)
 
 
-Encoding()
-Hashing()
 KRunnerHandler()
 loop = GLib.MainLoop()
 loop.run()
