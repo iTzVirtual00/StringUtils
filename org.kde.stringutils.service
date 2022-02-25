@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=me.itzvirtual.stringutils
+Exec=%{INTERPRETER_PATH} "%{SCRIPT_PATH}"

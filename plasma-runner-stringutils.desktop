@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=StringUtils
+Comment=encoding, hashing and other cool stuff
+X-KDE-ServiceTypes=Plasma/Runner
+Type=Service
+Icon=planetkde
+X-KDE-PluginInfo-Author=iTzVirtual
+X-KDE-PluginInfo-Email=lol
+X-KDE-PluginInfo-Name=stringutils
+X-KDE-PluginInfo-Version=1.0
+X-KDE-PluginInfo-License=LGPL
+X-KDE-PluginInfo-EnabledByDefault=true
+X-Plasma-API=DBus
+X-Plasma-DBusRunner-Service=me.itzvirtual.stringutils
+X-Plasma-DBusRunner-Path=/stringutils
